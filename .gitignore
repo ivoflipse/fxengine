@@ -11,3 +11,9 @@ tags
 
 #python bytecode
 *.pyc
+
+#logging output
+*.log
+
+#other
+theturtles.docx

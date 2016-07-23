@@ -19,8 +19,7 @@ def trade(events, strategy, portfolio, execution, stoprequest):
     """
     while not stoprequest.isSet():
         try:
-            event = events.get(True,0.5)
-            #block and wait a half second if queue is empty
+            event = events.get(True, 0.5)  # block and wait a half second if queue is empty
         except Queue.Empty:
             pass
         else:
@@ -38,20 +37,20 @@ def trade(events, strategy, portfolio, execution, stoprequest):
                 elif event.type == 'FILL':
                     logger.info("recv new fill event: %s", event)
                     portfolio.execute_fill_event(event)
-    #execute remaining events
-    while not events.empty():
+
+    while not events.empty():  # execute remaining events
         event = events.get()
         if event is not None:
-            if event.type == 'FILL':
-                #throw everything away except fillevents
+            if event.type == 'FILL':  # throw everything away except fillevents
+
                 logger.info("recv new fill event: %s", event)
                 portfolio.execute_fill_event(event)
             else:
                 pass
-    #close all positions
+    # close all positions
     logger.info("Closing all positions")
     portfolio.execute_close_all_positions()
-    #and execute the resulting order and fill events
+    # and execute the resulting order and fill events
     while not events.empty():
         event = events.get()
         if event is not None:
@@ -64,10 +63,10 @@ def trade(events, strategy, portfolio, execution, stoprequest):
 
 if __name__ == "__main__":
     logging.config.fileConfig('logging.conf')
-    logger = logging.getLogger(__name__) #get a new logger
+    logger = logging.getLogger(__name__)  # get a new logger
 
-    events = Queue.Queue() # Queue for communication between threads
-    stoprequest = threading.Event() # For stopping the threads
+    events = Queue.Queue()  # Queue for communication between threads
+    stoprequest = threading.Event()  # For stopping the threads
 
     # Trade UNITS units of INSTRUMENTS
     instruments = INSTRUMENTS
@@ -102,10 +101,11 @@ if __name__ == "__main__":
 
     # Create two separate threads: One for the trading loop
     # and another for the market price streaming class
-    trade_thread = threading.Thread(target=trade, args=(events,
-        strategy, portfolio, execution, stoprequest))
+    trade_thread = threading.Thread(target=trade,
+                                    args=(events, strategy, portfolio,
+                                          execution, stoprequest))
     price_thread = threading.Thread(target=prices.stream_to_queue,
-        args=[])
+                                    args=[])
 
     # Start both threads
     trade_thread.start()
