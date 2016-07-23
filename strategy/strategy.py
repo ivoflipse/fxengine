@@ -1,6 +1,6 @@
 import random
 
-from quantfxengine.event.event import SignalEvent
+from fxengine.event.event import SignalEvent
 
 
 class TestRandomStrategy(object):

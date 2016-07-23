@@ -6,8 +6,8 @@ import logging
 
 from abc import ABCMeta, abstractmethod #abstract base classes
 
-from quantfxengine.streaming.marketstate import MarketState
-from quantfxengine.event.event import TickEvent
+from fxengine.streaming.marketstate import MarketState
+from fxengine.event.event import TickEvent
 
 class AbstractPriceStream(object):
     """

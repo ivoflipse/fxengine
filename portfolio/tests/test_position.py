@@ -1,5 +1,5 @@
 import unittest
-from quantfxengine.portfolio.portfolio import Position
+from fxengine.portfolio.portfolio import Position
 
 class Test_Position(unittest.TestCase):
     """

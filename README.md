@@ -1,4 +1,4 @@
-quantfxengine is a project of mine for quantitative forex trading at [OANDA](http://www.oanda.com).
+fxengine is a project of mine for quantitative forex trading at [OANDA](http://www.oanda.com).
 
 It is based on code from [quantstart](http://www.quantstart.com/articles/Forex-Trading-Diary-1-Automated-Forex-Trading-with-the-OANDA-API).
 

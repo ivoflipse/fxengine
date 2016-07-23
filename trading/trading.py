@@ -4,11 +4,11 @@ import time
 import logging
 import logging.config
 
-from quantfxengine.execution.execution import ExecutionAtOANDA, MockExecution
-from quantfxengine.portfolio.portfolio import Portfolio
-from quantfxengine.settings import *
-from quantfxengine.strategy.strategy import TestRandomStrategy
-from quantfxengine.streaming.streaming import *
+from fxengine.execution.execution import ExecutionAtOANDA, MockExecution
+from fxengine.portfolio.portfolio import Portfolio
+from fxengine.settings import *
+from fxengine.strategy.strategy import TestRandomStrategy
+from fxengine.streaming.streaming import *
 
 
 def trade(events, strategy, portfolio, execution, stoprequest):

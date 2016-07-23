@@ -1,6 +1,6 @@
 import unittest
 
-from quantfxengine.streaming.marketstate import MarketState
+from fxengine.streaming.marketstate import MarketState
 
 class Test_MarketState(unittest.TestCase):
     """
