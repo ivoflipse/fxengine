@@ -1,6 +1,27 @@
-quantfxengine is a project of mine for quantitative forex trading at [OANDA](http://www.oanda.com).
+# FxEngine
+
+Simple event based backtester for Forex markets
+
+## Installation (local)
+
+    $ cd $HOME/projects
+    $ git clone https://github.com/Oxylo/fxengine
+    $ workon env
+    $ cd fxengine
+    $ pip install -r requirements.txt
+
+
+## Running
+
+    $ export PYTHONPATH=$HOME/projects  # export Python path
+    $ python trading/trading.py
+
+## Description
+
+fxengine is a project for quantitative forex trading at [OANDA](http://www.oanda.com).
 
 It is based on code from [quantstart](http://www.quantstart.com/articles/Forex-Trading-Diary-1-Automated-Forex-Trading-with-the-OANDA-API).
+and QuantFxEngine by H.Kopp.
 
 CAUTION: ALGORITHMIC TRADING IS A WAY TO LOSE LOTS OF MONEY VERY FAST. IF YOU DO NOT KNOW; WHAT YOU ARE DOING, DO NOT TRADE ON LIVE ACCOUNTS. Practice accounts are okay.
 
@@ -15,11 +36,8 @@ Backtesting is also possible if you have a suitable csv-file.
 
 If you want to adjust the logging, look at logging.conf.
 
-##Packages
-Before you can start, you need the following python-packages:
--requests
 
-##How it works
+## How it works
 The main function is in trade/trading.py. We open two threads, one who
 streams prices from a file or from a broker in streaming/streaming.py.
 This adds TickEvents to the queue which the two threads use to
@@ -42,6 +60,9 @@ FillEvents get handled by the portfolio to keep track of the current
 positions.
 
 
-#Other
+# Other
 Tests are done with nosetests and are bundled per object in a separate
 folder.
+
+# Finally
+Please have a look at the docs section if you need some background on the trading process.

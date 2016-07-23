@@ -5,8 +5,8 @@ import json
 import logging
 
 from abc import ABCMeta, abstractmethod
-from quantfxengine.event.event import FillEvent
-from quantfxengine.streaming.streaming import StreamingPricesFromFile
+from fxengine.event.event import FillEvent
+from fxengine.streaming.streaming import StreamingPricesFromFile
 
 class AbstractExecution(object):
     """

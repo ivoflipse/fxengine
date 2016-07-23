@@ -2,9 +2,9 @@ import unittest
 import Queue
 import threading
 
-from quantfxengine.portfolio.portfolio import Portfolio
-from quantfxengine.streaming.streaming import MockPriceStream
-from quantfxengine.event.event import SignalEvent, FillEvent
+from fxengine.portfolio.portfolio import Portfolio
+from fxengine.streaming.streaming import MockPriceStream
+from fxengine.event.event import SignalEvent, FillEvent
 
 class Test_Portfolio(unittest.TestCase):
     """

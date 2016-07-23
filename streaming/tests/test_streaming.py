@@ -3,7 +3,7 @@ import threading
 import Queue
 import os
 
-from quantfxengine.streaming.streaming import *
+from fxengine.streaming.streaming import *
 
 class Test_StreamingForexPrices_OANDA(unittest.TestCase):
     """

@@ -2,8 +2,8 @@ import logging
 from copy import deepcopy
 from abc import ABCMeta, abstractmethod
 
-from quantfxengine.event.event import OrderEvent, FillEvent
-from quantfxengine.portfolio.position import Position
+from fxengine.event.event import OrderEvent, FillEvent
+from fxengine.portfolio.position import Position
 
 class AbstractPortfolio(object):
     """
