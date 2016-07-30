@@ -19,11 +19,9 @@ class TickEvent(Event):
         self.ask = ask
 
     def __str__(self):
-        return "type: "+ str(self.type)+ \
-            ", instrument: "+ str(self.instrument)+ \
-            ", time: "+ str(self.time)+ \
-            ", bid: "+ str(self.bid)+ \
-            ", ask: "+ str(self.ask)
+        return "type: {}, instrument: {}, time: {}, bid: {}, ask: {}".format(
+            self.type, self.instrument, self.time, self.bid, self.ask
+        )
 
     def __repr__(self):
         return str(self)
@@ -35,20 +33,22 @@ class SignalEvent(Event):
     management
     Attributes
         instrument: e.g. EUR_USD
-        order_type: 'market' or 'limit'
         side: 'LONG' or 'SHORT'
+        price: callable
     """
-    def __init__(self, instrument, order_type, side):
+    def __init__(self, instrument, side, current_price, current_time, buy=None, expiry=None):
         self.type = 'SIGNAL'
         self.instrument = instrument
-        self.order_type = order_type
         self.side = side
+        self.current_price = current_price
+        self.current_time = current_time
+        self.buy = buy
+        self.expiry = expiry
 
     def __str__(self):
-        return "type: "+ str(self.type)+ \
-            ", instrument: "+ str(self.instrument)+ \
-            ", order_type: "+ str(self.order_type)+ \
-            ", side: "+ str(self.side)
+        return "type: {}, instrument: {}, side: {}, current_time: {}, current_price: {}".format(
+            self.type, self.instrument, self.side, self.current_time, self.current_price
+        )
 
     def __repr__(self):
         return str(self)
@@ -60,22 +60,22 @@ class OrderEvent(Event):
     Attributes:
         instrument: e.g. "EUR_USD"
         units: How much we want to buy/sell
-        order_type: 'market' or 'limit'
         side: 'buy' or 'sell'
     """
-    def __init__(self, instrument, units, order_type, side):
+    def __init__(self, instrument, units, side, current_price=None, current_time=None, buy=None, expiry=None):
         self.type = 'ORDER'
         self.instrument = instrument
         self.units = units
-        self.order_type = order_type
         self.side = side
+        self.current_price = current_price
+        self.current_time = current_time
+        self.buy = buy
+        self.expiry = expiry
 
     def __str__(self):
-        return "type: "+ str(self.type)+ \
-            ", instrument: "+ str(self.instrument)+ \
-            ", units: "+ str(self.units)+ \
-            ", order_type: "+ str(self.order_type)+ \
-            ", side: "+ str(self.side)
+        return "type: {}, instrument: {}, units: {}, side: {}, current_time: {}, current_price: {}".format(
+            self.type, self.instrument, self.units, self.side, self.current_time, self.current_price
+        )
 
     def __repr__(self):
         return str(self)
@@ -98,11 +98,9 @@ class FillEvent(Event):
         self.price = price
 
     def __str__(self):
-        return "type: "+ str(self.type)+ \
-            ", instrument: "+ str(self.instrument)+ \
-            ", units: "+ str(self.units)+ \
-            ", side: "+ str(self.side)+ \
-            ", price: "+ str(self.price)
+        return "type: {}, instrument: {}, units: {}, side: {}, price: {}".format(
+            self.type, self.instrument, self.units, self.side, self.price
+        )
 
     def __repr__(self):
         return str(self)

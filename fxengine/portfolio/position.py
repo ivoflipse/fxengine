@@ -11,10 +11,8 @@ class Position(object):
         profit_base: current profit or loss
         profit_perc: current profit or loss in percent
     """
-    def __init__(
-        self, side, market, units, 
-        exposure, avg_price, cur_price
-    ):
+
+    def __init__(self, side, market, units, exposure, avg_price, cur_price):
         self.side = side
         self.market = market
         self.units = units
@@ -34,7 +32,7 @@ class Position(object):
         """
         calculates the current profit or loss
         """
-        pips = self.calculate_pips()        
+        pips = self.calculate_pips()
         return pips * self.exposure / self.cur_price
 
     def calculate_profit_perc(self):

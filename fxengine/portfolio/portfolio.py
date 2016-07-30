@@ -1,9 +1,11 @@
 import logging
 from copy import deepcopy
 from abc import ABCMeta, abstractmethod
+import dateutil.parser
 
-from fxengine.event.event import OrderEvent, FillEvent
+from fxengine.event.event import OrderEvent
 from fxengine.portfolio.position import Position
+
 
 class AbstractPortfolio(object):
     """
@@ -21,19 +23,17 @@ class AbstractPortfolio(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def execute_signal_event(self,signal_event):
-        raise NotImplementedError("Need to implement "\
-                "execute_signal_event")
+    def execute_signal_event(self, signal_event):
+        raise NotImplementedError("Need to implement execute_signal_event")
 
     @abstractmethod
-    def execute_tick_event(self,tick_event):
-        raise NotImplementedError("Need to implement "\
-                "execute_tick_event")
+    def execute_tick_event(self, tick_event):
+        raise NotImplementedError("Need to implement execute_tick_event")
 
     @abstractmethod
-    def execute_fill_event(self,fill_event):
-        raise NotImplementedError("Need to implement "\
-                "execute_fill_event")
+    def execute_fill_event(self, fill_event):
+        raise NotImplementedError("Need to implement execute_fill_event")
+
 
 class Portfolio(AbstractPortfolio):
     """
@@ -49,10 +49,8 @@ class Portfolio(AbstractPortfolio):
         trade_units: how much units we trade
         positions: a dictionary of positions
     """
-    def __init__(
-        self, ticker, events, base="EUR", leverage=20,
-        equity=100000.0, risk_per_trade=0.02
-    ):
+
+    def __init__(self, ticker, events, base="EUR", leverage=20, equity=100000.0, risk_per_trade=0.02):
         self.ticker = ticker
         self.events = events
         self.base = base
@@ -62,40 +60,30 @@ class Portfolio(AbstractPortfolio):
         self.risk_per_trade = risk_per_trade
         self.trade_units = self.calc_risk_position_size()
         self.positions = {}
+        self.orders = []
         self.logger = logging.getLogger(__name__)
 
     def calc_risk_position_size(self):
         return self.equity * self.risk_per_trade / self.leverage
 
-    def add_new_position(
-        self, side, market, units, exposure,
-        add_price, remove_price
-    ):
-        ps = Position(
-            side, market, units, exposure,
-            add_price, remove_price
-        )
+    def add_new_position(self, side, market, units, exposure, add_price, remove_price):
+        ps = Position(side, market, units, exposure, add_price, remove_price)
         self.positions[market] = ps
 
-    def add_position_units(
-        self, market, units, exposure, 
-        add_price, remove_price
-    ):
+    def add_position_units(self, market, units, exposure, add_price, remove_price):
         if market not in self.positions:
             return False
         else:
             ps = self.positions[market]
             new_total_units = ps.units + units
-            new_total_cost = ps.avg_price*ps.units + add_price*units
+            new_total_cost = ps.avg_price * ps.units + add_price * units
             ps.exposure += exposure
-            ps.avg_price = new_total_cost/new_total_units
+            ps.avg_price = new_total_cost / new_total_units
             ps.units = new_total_units
             ps.update_position_price(remove_price)
             return True
 
-    def remove_position_units(
-        self, market, units, remove_price
-    ):
+    def remove_position_units(self, market, units, remove_price):
         if market not in self.positions:
             return False
         else:
@@ -104,21 +92,19 @@ class Portfolio(AbstractPortfolio):
             exposure = float(units)
             ps.exposure -= exposure
             ps.update_position_price(remove_price)
-            pnl = ps.calculate_pips() * exposure / remove_price 
+            pnl = ps.calculate_pips() * exposure / remove_price
             self.balance += pnl
             return True
 
-    def close_position(
-        self, market, remove_price
-    ):
+    def close_position(self, market, remove_price):
         if market not in self.positions:
             return False
         else:
             ps = self.positions[market]
             ps.update_position_price(remove_price)
-            pnl = ps.calculate_pips() * ps.exposure / remove_price 
+            pnl = ps.calculate_pips() * ps.exposure / remove_price
             self.balance += pnl
-            del[self.positions[market]]
+            del [self.positions[market]]
             return True
 
     def execute_close_all_positions(self):
@@ -127,31 +113,67 @@ class Portfolio(AbstractPortfolio):
         """
         for instrument in self.positions.keys():
             pos = self.positions[instrument]
-            remove_price = self.ticker.cur_prices[pos.market].bid
             units = pos.units
             if pos.side == "SHORT":
-                order = OrderEvent(pos.market, units, "market", "buy")
+                order = OrderEvent(
+                    pos.market,
+                    units,
+                    "buy"
+                )
             else:
-                order = OrderEvent(pos.market, units, "market", "sell")
+                order = OrderEvent(
+                    pos.market,
+                    units,
+                    "sell"
+                )
             self.events.put(order)
 
     def execute_signal_event(self, signal_event):
-        side = signal_event.side
         market = signal_event.instrument
         units = int(self.trade_units)
+        buy = signal_event.buy
+        order = OrderEvent(
+            market,
+            units,
+            side=signal_event.side,
+            current_time=signal_event.current_time,
+            current_price=signal_event.current_price,
+            buy=buy,
+            expiry=signal_event.expiry
+        )
+        if buy is None:
+            self.events.put(order)
+        else:
+            self.orders.append(order)
 
-        order = OrderEvent(market, units, "market", side)
-        self.events.put(order)
+    def execute_tick_event(self, tick_event):
+        # Check orders, whether to buy or wait?
+        current_time = dateutil.parser.parse(tick_event.time)
+        unprocessed = []
+        for order in self.orders:
+            # If the order expired, we don't process it any more
+            if order.expiry(current_time):
+                continue
 
-    def execute_tick_event(self,tick_event):
-        if tick_event.instrument in self.positions:
-            pos=self.positions[tick_event.instrument]
-            if pos.side == 'LONG':
-                pos.update_position_price(pos.units*tick_event.bid)
+            if order.buy(tick_event.bid):
+                order.current_price = tick_event.bid
+                order.current_time = tick_event.time
+                # TODO Create StopLoss or TakeProfit orders
+                self.events.put(order)
             else:
-                pos.update_position_price(pos.units*tick_event.ask)
+                unprocessed.append(order)
+        # Overwrite the existing orders with the unprocessed orders
+        self.orders = unprocessed
 
-    def execute_fill_event(self,fill_event):
+        # Also update our positions based on the tick information
+        if tick_event.instrument in self.positions:
+            pos = self.positions[tick_event.instrument]
+            if pos.side == 'LONG':
+                pos.update_position_price(pos.units * tick_event.bid)
+            else:
+                pos.update_position_price(pos.units * tick_event.ask)
+
+    def execute_fill_event(self, fill_event):
         side = fill_event.side
         market = fill_event.instrument
         units = fill_event.units
@@ -165,15 +187,9 @@ class Portfolio(AbstractPortfolio):
         # If there is no position, create one
         if market not in self.positions:
             if side == "LONG":
-                self.add_new_position(
-                    side, market, units, exposure,
-                    price, remove_price
-                )
+                self.add_new_position(side, market, units, exposure, price, remove_price)
             else:
-                self.add_new_position(
-                    "SHORT", market, units, exposure,
-                    price, add_price
-                )
+                self.add_new_position("SHORT", market, units, exposure, price, add_price)
 
         # If a position exists add or remove units
         else:
@@ -182,15 +198,9 @@ class Portfolio(AbstractPortfolio):
             if side == ps.side:
                 # Add to the position
                 if side == "LONG":
-                    self.add_position_units(
-                        market, units, exposure,
-                        price, remove_price
-                    )
+                    self.add_position_units(market, units, exposure, price, remove_price)
                 else:
-                    self.add_position_units(
-                        market, units, exposure,
-                        price, add_price
-                    )
+                    self.add_position_units(market, units, exposure, price, add_price)
             else:
                 # Check if the units close out the position
                 if units == ps.units:
@@ -198,26 +208,17 @@ class Portfolio(AbstractPortfolio):
                     self.close_position(market, price)
                 elif units < ps.units:
                     # Remove from the position
-                    self.remove_position_units(
-                        market, units, price
-                    )
-                else: # units > ps.units
+                    self.remove_position_units(market, units, price)
+                else:  # units > ps.units
                     # Close the position and add a new one with
                     # additional units of opposite side
                     new_units = units - ps.units
                     self.close_position(market, price)
-                    
                     new_exposure = float(new_units) * self.leverage
                     if ps.side == "LONG":
                         new_side = "SHORT"
-                        self.add_new_position(
-                            new_side, market, new_units, 
-                            new_exposure, price, add_price
-                        )
+                        self.add_new_position(new_side, market, new_units, new_exposure, price, add_price)
                     else:
                         new_side = "LONG"
-                        self.add_new_position(
-                            new_side, market, new_units, 
-                            new_exposure, price, remove_price
-                        )
+                        self.add_new_position(new_side, market, new_units, new_exposure, price, remove_price)
         self.logger.info("Balance: %0.2f" % self.balance)

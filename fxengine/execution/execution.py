@@ -8,6 +8,7 @@ from abc import ABCMeta, abstractmethod
 from fxengine.event.event import FillEvent
 from fxengine.streaming.streaming import StreamingPricesFromFile
 
+
 class AbstractExecution(object):
     """
     An abstract class to abstract execution for different Brokers.
@@ -21,8 +22,9 @@ class AbstractExecution(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def execute_order(self,order_event):
+    def execute_order(self, order_event):
         raise NotImplementedError("Need to implement execute_order!")
+
 
 class ExecutionAtOANDA(AbstractExecution):
     def __init__(self, domain, access_token, account_id, event_queue):
@@ -42,10 +44,10 @@ class ExecutionAtOANDA(AbstractExecution):
             "Authorization": "Bearer " + self.access_token
         }
         params = urllib.urlencode({
-            "instrument" : order_event.instrument,
-            "units" : order_event.units,
-            "type" : order_event.order_type,
-            "side" : order_event.side
+            "instrument": order_event.instrument,
+            "units": order_event.units,
+            "type": order_event.order_type,  # FIXME Always "market" here
+            "side": order_event.side
         })
         self.conn.request(
             "POST",
@@ -59,7 +61,7 @@ class ExecutionAtOANDA(AbstractExecution):
             except Exception as e:
                 self.logger.critical("Caught exception when converting message to json %s\n" + str(e))
                 return
-            if msg.has_key("price") and ( msg.has_key("tradeOpened") or msg.has_key("tradeClosed") ):
+            if msg.has_key("price") and (msg.has_key("tradeOpened") or msg.has_key("tradeClosed")):
                 self.logger.debug(msg)
                 instrument = msg["instrument"]
                 price = msg["price"]
@@ -71,8 +73,8 @@ class ExecutionAtOANDA(AbstractExecution):
                     elif side == "sell":
                         fevent = FillEvent(instrument, units, "SHORT", price)
                     else:
-                        raise ValueError("side should be 'buy' or 'sell' "\
-                                "but is %s", side)
+                        raise ValueError("side should be 'buy' or 'sell' " \
+                                         "but is %s", side)
                     self.event_queue.put(fevent)
                 else:
                     for close in msg["tradesClosed"]:
@@ -83,23 +85,24 @@ class ExecutionAtOANDA(AbstractExecution):
                         elif side == "sell":
                             fevent = FillEvent(instrument, units, "SHORT", price)
                         else:
-                            raise ValueError("side should be 'buy' or 'sell' "\
-                                "but is %s", side)
+                            raise ValueError("side should be 'buy' or 'sell' but is {}".format(side))
                         self.event_queue.put(fevent)
+
 
 class MockExecution(AbstractExecution):
     """
     A mock execution object which does not trade externally
     Very useful for backtesting purposes
     """
+
     def __init__(self, event_queue, ticker):
         self.event_queue = event_queue
         self.ticker = ticker
         self.logger = logging.getLogger(__name__)
+
     def execute_order(self, order_event):
         instrument = order_event.instrument
         units = order_event.units
-        order_type = order_event.order_type
         side = order_event.side
         self.logger.debug("Would have executed: %s ", order_event)
         if side == "buy":
@@ -109,6 +112,6 @@ class MockExecution(AbstractExecution):
             price = self.ticker.cur_prices[instrument].bid
             fevent = FillEvent(instrument, units, "SHORT", price)
         else:
-            raise ValueError("side should be 'buy' or 'sell' "\
-                    "but is %s", side)
+            raise ValueError("side should be 'buy' or 'sell' " \
+                             "but is %s", side)
         self.event_queue.put(fevent)

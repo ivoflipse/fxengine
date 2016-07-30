@@ -1,4 +1,5 @@
 import Queue
+import os
 import threading
 import time
 import logging
@@ -6,9 +7,10 @@ import logging.config
 
 from fxengine.execution.execution import ExecutionAtOANDA, MockExecution
 from fxengine.portfolio.portfolio import Portfolio
-from fxengine.settings import *
-from fxengine.strategy.strategy import TestRandomStrategy
-from fxengine.streaming.streaming import *
+from fxengine.settings import (INSTRUMENTS, UNITS, BACKTEST, BACKTESTFILE, STREAM_DOMAIN, ACCESS_TOKEN, ACCOUNT_ID,
+    API_DOMAIN, LOGGING_CONF)
+from fxengine.strategy.strategy import TestRandomStrategy, NewsStrategy
+from fxengine.streaming.streaming import StreamingPricesFromFile, StreamingForexPrices_OANDA
 
 
 def trade(events, strategy, portfolio, execution, stoprequest):
@@ -21,7 +23,7 @@ def trade(events, strategy, portfolio, execution, stoprequest):
         try:
             event = events.get(True, 0.5)  # block and wait a half second if queue is empty
         except Queue.Empty:
-            pass
+            stoprequest.set()  # If the queue is empty, give up
         else:
             if event is not None:
                 if event.type == 'TICK':
@@ -42,11 +44,11 @@ def trade(events, strategy, portfolio, execution, stoprequest):
         event = events.get()
         if event is not None:
             if event.type == 'FILL':  # throw everything away except fillevents
-
                 logger.info("recv new fill event: %s", event)
                 portfolio.execute_fill_event(event)
             else:
                 pass
+
     # close all positions
     logger.info("Closing all positions")
     portfolio.execute_close_all_positions()
@@ -61,12 +63,18 @@ def trade(events, strategy, portfolio, execution, stoprequest):
                 logger.info("recv new fill event: %s", event)
                 portfolio.execute_fill_event(event)
 
+    logger.info("Balance: %0.2f" % portfolio.balance)
+    logger.info("All done!")
+
+
 if __name__ == "__main__":
-    logging.config.fileConfig('logging.conf')
+    import time
+    start = time.time()
+    logging.config.fileConfig(LOGGING_CONF)
     logger = logging.getLogger(__name__)  # get a new logger
 
     events = Queue.Queue()  # Queue for communication between threads
-    stoprequest = threading.Event()  # For stopping the threads
+    stop_request = threading.Event()  # For stopping the threads
 
     # Trade UNITS units of INSTRUMENTS
     instruments = INSTRUMENTS
@@ -75,7 +83,7 @@ if __name__ == "__main__":
     if BACKTEST:
         # Create the price streaming class
         prices = StreamingPricesFromFile(
-            BACKTESTFILE, events, stoprequest
+            BACKTESTFILE, events, stop_request
         )
         # Create the mock execution handler
         execution = MockExecution(events, prices)
@@ -84,7 +92,7 @@ if __name__ == "__main__":
         # making sure to provide authentication commands
         prices = StreamingForexPrices_OANDA(
             STREAM_DOMAIN, ACCESS_TOKEN, ACCOUNT_ID,
-            instruments, events, stoprequest
+            instruments, events, stop_request
         )
         # Create the execution handler making sure to
         # provide authentication commands
@@ -92,7 +100,7 @@ if __name__ == "__main__":
 
     # Create the strategy/signal generator, passing the
     # instrument, quantity of units and the events queue
-    strategy = TestRandomStrategy(events)
+    strategy = NewsStrategy(events)
 
     # Create the portfolio object that will be used to
     # compare the OANDA positions with the local, to
@@ -103,7 +111,7 @@ if __name__ == "__main__":
     # and another for the market price streaming class
     trade_thread = threading.Thread(target=trade,
                                     args=(events, strategy, portfolio,
-                                          execution, stoprequest))
+                                          execution, stop_request))
     price_thread = threading.Thread(target=prices.stream_to_queue,
                                     args=[])
 
@@ -117,6 +125,9 @@ if __name__ == "__main__":
             trade_thread.join(10)
     except (KeyboardInterrupt, SystemExit):
         logger.info("Sending stop request to threads")
-        stoprequest.set()
+        stop_request.set()
         logger.info("Waiting for threads to terminate")
         logging.shutdown()
+
+    stop = time.time()
+    print("{:.2f} seconds".format(stop - start))
